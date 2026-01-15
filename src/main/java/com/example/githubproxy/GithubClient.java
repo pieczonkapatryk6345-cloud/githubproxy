@@ -3,12 +3,11 @@ package com.example.githubproxy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.util.List;
-import java.util.Map;
 
 @Component
 public class GithubClient {
@@ -23,22 +22,31 @@ public class GithubClient {
                 .build();
     }
 
-    public List<Map<String, Object>> getRepositories(String user) {
+    public List<Repository> getRepositories(String user) {
         return restClient.get()
                 .uri("/users/{user}/repos", user)
                 .retrieve()
-                .body(new ParameterizedTypeReference<>() {});
+                .onStatus(
+                        HttpStatus.NOT_FOUND::equals,
+                        (req, res) -> {
+                            throw new UserNotFoundException(user);
+                        }
+                )
+                .body(new ParameterizedTypeReference<>() {
+                });
     }
 
-    public List<Map<String, Object>> getBranches(String owner, String repo) {
-        try {
-            List<Map<String, Object>> result = restClient.get()
-                    .uri("/repos/{owner}/{repo}/branches", owner, repo)
-                    .retrieve()
-                    .body(new ParameterizedTypeReference<>() {});
-            return result != null ? result : List.of();
-        } catch (HttpClientErrorException.NotFound e) {
-            return List.of();
-        }
+    public List<Branch> getBranches(String owner, String repo) {
+        return restClient.get()
+                .uri("/repos/{owner}/{repo}/branches", owner, repo)
+                .retrieve()
+                .onStatus(
+                        HttpStatus.NOT_FOUND::equals,
+                        (req, res) -> {
+                            throw new BranchesNotFoundException(owner);
+                        }
+                )
+                .body(new ParameterizedTypeReference<>() {
+                });
     }
 }

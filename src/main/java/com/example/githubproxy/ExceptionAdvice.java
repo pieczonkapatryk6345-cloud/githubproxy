@@ -6,20 +6,15 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
-public class UserNotFoundAdvice {
+public class ExceptionAdvice {
 
-    @ExceptionHandler(UserNotFoundException.class)
-    private ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException ex) {
+    @ExceptionHandler({UserNotFoundException.class, BranchesNotFoundException.class})
+    private ResponseEntity<ErrorResponse> handleNotFound(RuntimeException ex) {
 
         HttpStatus status = HttpStatus.NOT_FOUND;
 
-        ErrorResponse errorResponse = new ErrorResponse(
-                status.value(),
-                ex.getMessage()
-        );
-
         return ResponseEntity
                 .status(status)
-                .body(errorResponse);
+                .body(new ErrorResponse(status.value(), ex.getMessage()));
     }
 }
